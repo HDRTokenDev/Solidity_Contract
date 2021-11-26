@@ -130,7 +130,7 @@ contract HDR  is ERC20, Ownable {
 
   	}
 
-
+    // this is used in case we have investors that because of a slow bsc chain didn't receive the dividends that pay you the reward
     function updateDividendTracker(address newAddress) public onlyOwner {
         require(newAddress != address(dividendTracker), "HDR : The dividend tracker already has that address");
 
@@ -147,20 +147,20 @@ contract HDR  is ERC20, Ownable {
 
         dividendTracker = newDividendTracker;
     }
-
+    // this function is used to change the exchange in case in the future we want to move from pancake swap
     function updateRouter(address newAddress) public onlyOwner {
         require(newAddress != address(router), "HDR : The router already has that address");
         emit Updaterouter(newAddress, address(router));
         router = IRouter(newAddress);
     }
-
+    // used when we have new marketing wallets or liquidity owners
     function excludeFromFees(address account, bool excluded) public onlyOwner {
         require(_isExcludedFromFees[account] != excluded, "HDR : Account is already the value of 'excluded'");
         _isExcludedFromFees[account] = excluded;
 
         emit ExcludeFromFees(account, excluded);
     }
-
+    // used when we have new marketing wallets or liquidity owners
     function excludeMultipleAccountsFromFees(address[] calldata accounts, bool excluded) public onlyOwner {
         for(uint256 i = 0; i < accounts.length; i++) {
             _isExcludedFromFees[accounts[i]] = excluded;
@@ -172,7 +172,7 @@ contract HDR  is ERC20, Ownable {
     function setAutomatedMarketMakerPair(address newPair, bool value) public onlyOwner {
         _setAutomatedMarketMakerPair(newPair, value);
     }
-
+    // used when we have new marketing wallets or liquidity owners
     function excludeFromDividends(address account, bool value) external onlyOwner{
         dividendTracker.excludeFromDividends(account, value);
     }
@@ -187,7 +187,7 @@ contract HDR  is ERC20, Ownable {
 
         emit SetAutomatedMarketMakerPair(newPair, value);
     }
-
+    // in case we need to update the gas for transactions
     function updateGasForProcessing(uint256 newValue) public onlyOwner {
         require(newValue >= 200000 && newValue <= 500000, "HDR : gasForProcessing must be between 200,000 and 500,000");
         require(newValue != gasForProcessing, "HDR : Cannot update gasForProcessing to same value");
@@ -265,34 +265,36 @@ contract HDR  is ERC20, Ownable {
     function getNumberOfDividendTokenHolders() external view returns(uint256) {
         return dividendTracker.getNumberOfTokenHolders();
     }
-
+    // in case we want to change the company that markets our coin
     function setMarketingWallet(address newWallet) external onlyOwner{
         marketingWallet = newWallet;
     }
-
+    // will be used when we change our liquidity provider
     function setLiquidityWallet(address newWallet) external onlyOwner{
         liquidityWallet = newWallet;
     }
-
+    // when the price will get bigger we might want to lower the threshold when the contracts makes the liquidity to save money.
     function setSwapTokensAtAmount(uint256 amount) external onlyOwner{
         swapTokensAtAmount = amount * 10**decimals();
     }
-
+    // in the start will be set at 2% but in future in case we belive that even 2% is to risky we might lower it.
     function setMaxWalletBalance(uint256 amount) external onlyOwner{
         maxWalletBalance = amount * 10**decimals();
     }
 
-    function setMinTokensToGetrewards(uint256 amount) external onlyOwner{
+    // This function is used to lower the amount need by the buyers to receive BUSD Rewards
+    function setMinTokensToGetRewards(uint256 amount) external onlyOwner{
         dividendTracker.setMinimumBalanceForRewards(amount * 10**decimals());
     }
-
+    // This function sets the maxium amount of tokens that can be sold in a transaction. we place a minim of 10M so we can't lower more then this (rug pull prevention)
     function setMaxTxAmount(uint256 amount) external onlyOwner{
-        require(amount > 200_000 * 10**decimals(), "Amount must be > 200M");
+        require(amount > 10_000 * 10**decimals(), "Amount must be > 10M");
         maxTxAmount = amount * 10**decimals();
     }
 
-    function setSwapEnabled(bool value) external onlyOwner{
-        swapEnabled = value;
+    // once enabled it can't be disabled
+    function enableSwap() external onlyOwner{
+        swapEnabled = true;
     }
 
     function _transfer(
@@ -505,7 +507,7 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
     function withdrawDividend() public pure override {
         require(false, "HDR_Dividend_Tracker: withdrawDividend disabled. Use the 'claim' function on the main HDR contract.");
     }
-
+    // this function might be used if we change the marketing wallet, to exculde him from taking profits for the coins inside the wallet.
     function excludeFromDividends(address account, bool value) external onlyOwner {
     	require(excludedFromDividends[account] != value);
     	excludedFromDividends[account] = value;
@@ -518,14 +520,14 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
         tokenHoldersMap.set(account, balanceOf(account));
       }
     }
-
+    // this function changes the time you have to wait until you can claim, must be between 1 and 24h
     function updateClaimWait(uint256 newClaimWait) external onlyOwner {
         require(newClaimWait >= 3600 && newClaimWait <= 86400, "HDR_Dividend_Tracker: claimWait must be updated to between 1 and 24 hours");
         require(newClaimWait != claimWait, "HDR_Dividend_Tracker: Cannot update claimWait to same value");
         emit ClaimWaitUpdated(newClaimWait, claimWait);
         claimWait = newClaimWait;
     }
-
+    // This function is used to lower the amount need by the buyers to receive BUSD Rewards
     function setMinimumBalanceForRewards(uint256 amount) external onlyOwner{
         minimumTokenBalanceForDividends = amount;
     }
@@ -609,23 +611,6 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
     	}
 
     	return block.timestamp.sub(lastClaimTime) >= claimWait;
-    }
-
-    function setBalance(address payable account, uint256 newBalance) external onlyOwner {
-    	if(excludedFromDividends[account]) {
-    		return;
-    	}
-
-    	if(newBalance >= minimumTokenBalanceForDividends) {
-            _setBalance(account, newBalance);
-    		tokenHoldersMap.set(account, newBalance);
-    	}
-    	else {
-            _setBalance(account, 0);
-    		tokenHoldersMap.remove(account);
-    	}
-
-    	processAccount(account, true);
     }
 
     function process(uint256 gas) public returns (uint256, uint256, uint256) {
