@@ -195,10 +195,6 @@ contract HDR  is ERC20, Ownable {
         gasForProcessing = newValue;
     }
 
-    function updateClaimWait(uint256 claimWait) external onlyOwner {
-        dividendTracker.updateClaimWait(claimWait);
-    }
-
     function getClaimWait() external view returns(uint256) {
         return dividendTracker.claimWait();
     }
