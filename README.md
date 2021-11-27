@@ -79,11 +79,3 @@ We will have all the functions that owner can call and other don't and explain w
     function excludeFromDividends(address account, bool value) external onlyOwner{
         dividendTracker.excludeFromDividends(account, value);
     }
-    
-        // in case we need to update the gas for transactions
-    function updateGasForProcessing(uint256 newValue) public onlyOwner {
-        require(newValue >= 200000 && newValue <= 500000, "HDR : gasForProcessing must be between 200,000 and 500,000");
-        require(newValue != gasForProcessing, "HDR : Cannot update gasForProcessing to same value");
-        emit GasForProcessingUpdated(newValue, gasForProcessing);
-        gasForProcessing = newValue;
-    }
