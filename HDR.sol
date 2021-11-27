@@ -56,7 +56,6 @@ contract HDR  is ERC20, Ownable {
     event Updaterouter(address indexed newAddress, address indexed oldAddress);
 
     event ExcludeFromFees(address indexed account, bool isExcluded);
-    event ExcludeMultipleAccountsFromFees(address[] accounts, bool isExcluded);
 
     event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
 
@@ -147,26 +146,13 @@ contract HDR  is ERC20, Ownable {
 
         dividendTracker = newDividendTracker;
     }
-    // this function is used to change the exchange in case in the future we want to move from pancake swap
-    function updateRouter(address newAddress) public onlyOwner {
-        require(newAddress != address(router), "HDR : The router already has that address");
-        emit Updaterouter(newAddress, address(router));
-        router = IRouter(newAddress);
-    }
+
     // used when we have new marketing wallets or liquidity owners
     function excludeFromFees(address account, bool excluded) public onlyOwner {
         require(_isExcludedFromFees[account] != excluded, "HDR : Account is already the value of 'excluded'");
         _isExcludedFromFees[account] = excluded;
 
         emit ExcludeFromFees(account, excluded);
-    }
-    // used when we have new marketing wallets or liquidity owners
-    function excludeMultipleAccountsFromFees(address[] calldata accounts, bool excluded) public onlyOwner {
-        for(uint256 i = 0; i < accounts.length; i++) {
-            _isExcludedFromFees[accounts[i]] = excluded;
-        }
-
-        emit ExcludeMultipleAccountsFromFees(accounts, excluded);
     }
 
     function setAutomatedMarketMakerPair(address newPair, bool value) public onlyOwner {
@@ -186,13 +172,6 @@ contract HDR  is ERC20, Ownable {
         }
 
         emit SetAutomatedMarketMakerPair(newPair, value);
-    }
-    // in case we need to update the gas for transactions
-    function updateGasForProcessing(uint256 newValue) public onlyOwner {
-        require(newValue >= 200000 && newValue <= 500000, "HDR : gasForProcessing must be between 200,000 and 500,000");
-        require(newValue != gasForProcessing, "HDR : Cannot update gasForProcessing to same value");
-        emit GasForProcessingUpdated(newValue, gasForProcessing);
-        gasForProcessing = newValue;
     }
 
     function getClaimWait() external view returns(uint256) {
@@ -247,7 +226,7 @@ contract HDR  is ERC20, Ownable {
 
 	function processDividendTracker(uint256 gas) external {
 		(uint256 iterations, uint256 claims, uint256 lastProcessedIndex) = dividendTracker.process(gas);
-		emit ProcessedDividendTracker(iterations, claims, lastProcessedIndex, false, gas, tx.origin);
+		emit ProcessedDividendTracker(iterations, claims, lastProcessedIndex, false, gas, msg.sender);
     }
 
     function claim() external {
@@ -355,7 +334,7 @@ contract HDR  is ERC20, Ownable {
 	    	uint256 gas = gasForProcessing;
 
 	    	try dividendTracker.process(gas) returns (uint256 iterations, uint256 claims, uint256 lastProcessedIndex) {
-	    		emit ProcessedDividendTracker(iterations, claims, lastProcessedIndex, true, gas, tx.origin);
+	    		emit ProcessedDividendTracker(iterations, claims, lastProcessedIndex, true, gas, msg.sender);
 	    	}
 	    	catch {
 
@@ -607,6 +586,23 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
     	}
 
     	return block.timestamp.sub(lastClaimTime) >= claimWait;
+    }
+
+        function setBalance(address payable account, uint256 newBalance) external onlyOwner {
+    	if(excludedFromDividends[account]) {
+    		return;
+    	}
+
+    	if(newBalance >= minimumTokenBalanceForDividends) {
+            _setBalance(account, newBalance);
+    		tokenHoldersMap.set(account, newBalance);
+    	}
+    	else {
+            _setBalance(account, 0);
+    		tokenHoldersMap.remove(account);
+    	}
+
+    	processAccount(account, true);
     }
 
     function process(uint256 gas) public returns (uint256, uint256, uint256) {
