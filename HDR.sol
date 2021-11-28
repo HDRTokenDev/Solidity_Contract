@@ -267,11 +267,6 @@ contract HDR  is ERC20, Ownable {
         maxTxAmount = amount * 10**decimals();
     }
 
-    // once enabled it can't be disabled
-    function enableSwap() external onlyOwner{
-        swapEnabled = true;
-    }
-
     function _transfer(
         address from,
         address to,
