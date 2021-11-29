@@ -15,7 +15,7 @@ contract HDR  is ERC20, Ownable {
     IRouter public router;
     address public  pair;
 
-    string constant _name = "HDR Token";
+    string constant _name = "HDR Coin";
     string constant _symbol = "HDR";
     uint8 constant _decimals = 4;
 
@@ -254,11 +254,14 @@ contract HDR  is ERC20, Ownable {
     }
     // in the start will be set at 2% but in future in case we belive that even 2% is to risky we might lower it.
     function setMaxWalletBalance(uint256 amount) external onlyOwner{
+        require(amount > 500_000_000, "the max wallet can't be lowered more then 500.000.000");
         maxWalletBalance = amount * 10**decimals();
     }
 
     // This function is used to lower the amount need by the buyers to receive BUSD Rewards
     function setMinTokensToGetRewards(uint256 amount) external onlyOwner{
+        require(amount > 1_000_000, "The min wallet can't be lowered more then 1.000.000");
+        require(amount < 1_000_000_000, "The min wallet can't be greater then 1.000.000.000");
         dividendTracker.setMinimumBalanceForRewards(amount * 10**decimals());
     }
     // This function sets the maxium amount of tokens that can be sold in a transaction. we place a minim of 10M so we can't lower more then this (rug pull prevention)
@@ -477,7 +480,7 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
     function withdrawDividend() public pure override {
         require(false, "HDR_Dividend_Tracker: withdrawDividend disabled. Use the 'claim' function on the main HDR contract.");
     }
-    // this function might be used if we change the marketing wallet, to exculde him from taking profits for the coins inside the wallet.
+    // this function might be used if we change the marketing wallet, to exclude him from taking profits for the coins inside the wallet.
     function excludeFromDividends(address account, bool value) external onlyOwner {
     	require(excludedFromDividends[account] != value);
     	excludedFromDividends[account] = value;
@@ -499,6 +502,8 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
     }
     // This function is used to lower the amount need by the buyers to receive BUSD Rewards
     function setMinimumBalanceForRewards(uint256 amount) external onlyOwner{
+        require(amount > 1_000_000, "The min wallet can't be lowered more then 1.000.000");
+        require(amount < 1_000_000_000, "The min wallet can't be greater then 1.000.000.000");
         minimumTokenBalanceForDividends = amount;
     }
 
@@ -583,7 +588,7 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
     	return block.timestamp.sub(lastClaimTime) >= claimWait;
     }
 
-        function setBalance(address payable account, uint256 newBalance) external onlyOwner {
+    function setBalance(address payable account, uint256 newBalance) external onlyOwner {
     	if(excludedFromDividends[account]) {
     		return;
     	}
