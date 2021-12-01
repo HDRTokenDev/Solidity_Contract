@@ -27,7 +27,7 @@ contract HDR  is ERC20, Ownable {
 
     HDRDividendTracker public dividendTracker;
 
-    uint256 public swapTokensAtAmount = 500_000_000 * (10**decimals());
+    uint256 public swapTokensAtAmount = 50_000_000 * (10**decimals());
     uint256 public maxWalletBalance = 2_000_000_000 * (10**decimals());  // 2% of total supply
     uint256 public maxTxAmount = 500_000_000 * (10 ** decimals());    // 0.5% of total supply
     uint256 public _totalSupply =  100_000_000_000 * (10 ** decimals());
@@ -469,7 +469,7 @@ contract HDRDividendTracker is Ownable, DividendPayingToken {
 
     constructor()  DividendPayingToken("HDR_Dividend_Tracker", "HDR_Dividend_Tracker") {
     	claimWait = 3600;
-        minimumTokenBalanceForDividends = 500e6 * (10**9); //must hold 500_000_000 tokens
+        minimumTokenBalanceForDividends = 500_000_000 * (10**decimals()); //must hold 500_000_000 tokens
     }
 
     function _transfer(address, address, uint256) internal pure override{
